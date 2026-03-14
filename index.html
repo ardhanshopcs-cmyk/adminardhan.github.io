@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin v10 | Ardhan Shop Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+    <style>
+        :root { --primary: #f59e0b; --bg: #0f172a; --card: #1e293b; --text: #ffffff; --error: #ef4444; --success: #22c55e; }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); padding: 20px; padding-bottom: 100px; }
+        h2 { color: var(--primary); margin: 20px 0; border-bottom: 2px solid var(--primary); display: inline-block; font-size: 1.1rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+        .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #334155; box-shadow: 0 10px 15px rgba(0,0,0,0.3); margin-bottom: 15px; position: relative; }
+        
+        input, select, textarea { width: 100%; padding: 14px; margin: 8px 0; border-radius: 12px; border: 1px solid #475569; background: #0f172a; color: white; font-family: inherit; transition: 0.3s; }
+
+        .custom-select-wrapper { position: relative; width: 100%; margin: 8px 0; }
+        .custom-select-trigger { background: #0f172a; border: 1px solid #475569; padding: 14px; border-radius: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: white; font-size: 0.9rem; }
+        .custom-options { position: absolute; top: 110%; left: 0; width: 100%; background: #1e293b; border: 1px solid var(--primary); border-radius: 12px; overflow: hidden; display: none; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.6); animation: slideDown 0.3s ease; max-height: 250px; overflow-y: auto; }
+        .custom-option { padding: 14px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; border-bottom: 1px solid #334155; }
+        .custom-option:hover { background: var(--primary); color: black; }
+        .custom-options.show { display: block; }
+
+        button { background: var(--primary); color: #000; border: none; padding: 14px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; margin-top: 5px; }
+        button:active { transform: scale(0.98); }
+        
+        .mode-selector { display: flex; gap: 10px; margin: 10px 0; }
+        .mode-btn { flex: 1; padding: 12px; border-radius: 10px; background: #0f172a; border: 2px solid #334155; color: #94a3b8; cursor: pointer; font-weight: 600; text-align: center; font-size: 0.8rem; transition: 0.3s; }
+        .mode-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(245, 158, 11, 0.1); }
+
+        .tab-menu { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 15px; }
+        .tab-btn { background: var(--card); padding: 12px 25px; border-radius: 15px; cursor: pointer; white-space: nowrap; font-size: 0.85rem; border: 1px solid #334155; color: white; font-weight: 600; }
+        .tab-btn.active { background: var(--primary); color: black; border-color: var(--primary); }
+        
+        .view-section { display: none; animation: fadeIn 0.4s ease; }
+        .view-section.active { display: block; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 10000; }
+        .modal-card { background: var(--card); padding: 30px; border-radius: 25px; width: 90%; max-width: 400px; text-align: center; border: 2px solid var(--primary); }
+
+        .toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10000; }
+        .toast { background: white; color: black; padding: 15px 30px; border-radius: 50px; font-weight: bold; margin-top: 10px; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: slideUp 0.4s ease; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translate(-50%, 50px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+        @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .btn-red { background: var(--error); color: white; margin-top: 10px; }
+        .btn-green { background: var(--success); color: white; margin-top: 10px; }
+        .btn-blue { background: #3b82f6; color: white; margin-top: 10px; }
+        .promo-badge { background: var(--primary); color: black; padding: 3px 8px; border-radius: 5px; font-weight: 800; font-size: 0.7rem; }
+        .img-preview { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; margin: 10px 0; border: 1px dashed var(--primary); }
+        
+        .order-detail { font-size: 0.8rem; line-height: 1.6; background: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #334155; }
+        .order-detail b { color: var(--primary); }
+
+        /* LIST STYLE FOR BLUE TICK */
+        .verified-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px; border-radius: 10px; border: 1px solid #334155; margin-top: 8px; }
+        .blue-tick-img { width: 18px; vertical-align: middle; margin-left: 5px; }
+    </style>
+</head>
+<body>
+
+    <div id="modernModal" class="modal-overlay">
+        <div class="modal-card">
+            <h3 id="modalTitle">Konfirmasi</h3>
+            <p id="modalMsg" style="margin-top:10px; font-size: 0.9rem; color: #94a3b8;"></p>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button style="background:#334155; color:white;" onclick="closeModernModal()">Batal</button>
+                <button id="modalConfirmBtn">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastArea"></div>
+
+    <h1 style="color: var(--primary);">Ardhan Master Admin</h1>
+    
+    <div class="tab-menu" style="margin-top: 20px;">
+        <div class="tab-btn active" onclick="switchAdmin('orders', this)">Pesanan</div>
+        <div class="tab-btn" onclick="switchAdmin('promo', this)">Sistem Promo</div>
+        <div class="tab-btn" onclick="switchAdmin('tick', this)">Centang Biru</div>
+        <div class="tab-btn" onclick="switchAdmin('jbadmin', this)">JB Akun</div>
+        <div class="tab-btn" onclick="switchAdmin('grupadmin', this)">Grup Admin</div>
+        <div class="tab-btn" onclick="switchAdmin('catalog', this)">Katalog Game</div>
+        <div class="tab-btn" onclick="switchAdmin('banners', this)">Edit Banner</div>
+        <div class="tab-btn" onclick="switchAdmin('payment', this)">QRIS</div>
+    </div>
+
+    <div id="view-orders" class="view-section active">
+        <h2>Daftar Antrian Pesanan</h2>
+        <div class="grid" id="orderList"></div>
+    </div>
+
+    <div id="view-tick" class="view-section">
+        <h2>Kelola Akun Centang Biru</h2>
+        <div class="card">
+            <input type="text" id="verifyInputName" placeholder="Masukkan Nama Lengkap Akun...">
+            <button onclick="addVerifiedUser()">+ BERIKAN CENTANG BIRU</button>
+            <p style="font-size: 0.7rem; color: #94a3b8; margin-top: 10px;">*Nama harus persis sama dengan yang ada di profil user.</p>
+        </div>
+        <h2>Daftar Akun Terverifikasi</h2>
+        <div id="verifiedUsersList"></div>
+    </div>
+
+    <div id="view-promo" class="view-section">
+        <h2>Buat Kode Promo Baru</h2>
+        <div class="card" id="promoForm">
+            <input type="text" id="pcCode" placeholder="KODE PROMO">
+            <div class="custom-select-wrapper">
+                <div class="custom-select-trigger" onclick="togglePromoDropdown()">
+                    <span id="promoSelectedGameText">Semua Game</span>
+                    <span>▼</span>
+                </div>
+                <div class="custom-options" id="promoGameOptions"></div>
+                <input type="hidden" id="promoSelectedGameValue" value="all">
+            </div>
+            <div class="mode-selector">
+                <div class="mode-btn active" id="typeRp" onclick="setPromoType('rp')">RP</div>
+                <div class="mode-btn" id="typePct" onclick="setPromoType('pct')">%</div>
+            </div>
+            <input type="number" id="pcDisc" placeholder="Jumlah Potongan">
+            <div class="mode-selector">
+                <div class="mode-btn active" id="useOnce" onclick="setPromoUse('once')">Sekali</div>
+                <div class="mode-btn" id="useMulti" onclick="setPromoUse('multi')">Multi</div>
+            </div>
+            <input type="number" id="pcLimit" placeholder="Limit Orang">
+            <input type="date" id="pcExp">
+            <button id="btnSavePromo" onclick="savePromo()">AKTIFKAN PROMO</button>
+            <button id="btnCancelPromo" style="display:none; background:#334155; color:white; margin-top:10px;" onclick="resetPromoForm()">BATAL EDIT</button>
+        </div>
+        <h2>Daftar Promo Aktif</h2>
+        <div id="activePromoList"></div>
+    </div>
+
+    <div id="view-jbadmin" class="view-section">
+        <h2>Kelola Akun Game</h2>
+        <div id="formJbAdmin" class="card">
+            <input type="hidden" id="editJbAdminId">
+            <input type="text" id="jbAdmGame" placeholder="Jenis Game">
+            <input type="number" id="jbAdmPrice" placeholder="Harga">
+            <textarea id="jbAdmDesc" placeholder="Deskripsi Akun"></textarea>
+            <p style="font-size:0.8rem; color:var(--primary)">Foto Akun:</p>
+            <input type="file" id="jbAdmFile" accept="image/*" onchange="previewImg(this, 'jbPreview')">
+            <img id="jbPreview" class="img-preview" src="">
+            <input type="text" id="jbAdmWa" placeholder="WhatsApp 628...">
+            <button id="btnSaveJbAdmin" onclick="saveJbAdmin()">POSTING AKUN ADMIN</button>
+            <button id="btnCancelJbEdit" style="display:none; background:#334155; color:white; margin-top:10px;" onclick="resetJbAdminForm()">BATAL EDIT</button>
+        </div>
+        <h2>Daftar Postingan Akun Admin</h2>
+        <div class="grid" id="listAdminPostJB"></div>
+        <hr style="margin: 40px 0; border: 1px dashed #334155;">
+        <h2>Monitoring Upload Akun Publik</h2>
+        <div class="grid" id="listPublicMonitoringJB"></div>
+    </div>
+
+    <div id="view-grupadmin" class="view-section">
+        <h2>Kelola Grup Admin</h2>
+        <div id="formGrupAdmin" class="card">
+            <input type="hidden" id="editGrupAdminId">
+            <input type="text" id="grupAdmName" placeholder="Nama Grup">
+            <textarea id="grupAdmDesc" placeholder="Deskripsi Grup"></textarea>
+            <p style="font-size:0.8rem; color:var(--primary)">Foto Grup:</p>
+            <input type="file" id="grupAdmFile" accept="image/*" onchange="previewImg(this, 'grupPreview')">
+            <img id="grupPreview" class="img-preview" src="">
+            <input type="text" id="grupAdmLink" placeholder="Link Join">
+            <button id="btnSaveGrupAdmin" onclick="saveGrupAdmin()">POSTING GRUP ADMIN</button>
+            <button id="btnCancelGrupEdit" style="display:none; background:#334155; color:white; margin-top:10px;" onclick="resetGrupAdminForm()">BATAL EDIT</button>
+        </div>
+        <h2>Daftar Postingan Grup Admin</h2>
+        <div class="grid" id="listAdminPostGrup"></div>
+        <hr style="margin: 40px 0; border: 1px dashed #334155;">
+        <h2>Monitoring Upload Grup Publik</h2>
+        <div class="grid" id="listPublicMonitoringGrup"></div>
+    </div>
+
+    <div id="view-catalog" class="view-section">
+        <h2>Katalog Item</h2>
+        <div class="card">
+            <div class="custom-select-wrapper">
+                <div class="custom-select-trigger" onclick="toggleCatDropdown()">
+                    <span id="catSelectedGameText">Pilih Game...</span>
+                    <span>▼</span>
+                </div>
+                <div class="custom-options" id="catGameOptions"></div>
+                <input type="hidden" id="catSelectedGameValue">
+            </div>
+            <div id="itemEditorArea" style="display: none; margin-top: 20px;">
+                <input type="text" id="itemName" placeholder="Nama Item">
+                <input type="number" id="itemPrice" placeholder="Harga Jual">
+                <button onclick="saveItem()">SIMPAN ITEM</button>
+                <div id="currentItemsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-banners" class="view-section">
+        <h2>Kelola Banner (Pilih dari Galeri)</h2>
+        <div class="card">
+            <input type="file" id="bannerFile" accept="image/*" onchange="previewImg(this, 'bannerPreview')">
+            <img id="bannerPreview" class="img-preview" src="" style="display:none">
+            <button onclick="uploadNewBanner()">+ TAMBAH BANNER KE WEB</button>
+        </div>
+        <h2>Banner yang Sedang Dipasang</h2>
+        <div class="grid" id="bannerListArea"></div>
+    </div>
+
+    <div id="view-payment" class="view-section">
+        <h2>Pengaturan QRIS</h2>
+        <div class="card">
+            <p style="font-size:0.8rem; color:var(--primary)">Upload QRIS Baru:</p>
+            <input type="file" id="qrisFile" accept="image/*" onchange="previewImg(this, 'qrisPreview')">
+            <img id="qrisPreview" class="img-preview" src="">
+            <button onclick="updateQris()">SIMPAN QRIS</button>
+        </div>
+    </div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyC1RBc_6KqPUlV62I5C_t-OyJKHPWsjv_U",
+        authDomain: "ardhan-shop-30dbd.firebaseapp.com",
+        projectId: "ardhan-shop-30dbd",
+        storageBucket: "ardhan-shop-30dbd.firebasestorage.app",
+        messagingSenderId: "742992182104",
+        appId: "1:742992182104:web:c59d9eed84b39535ec432d"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const adminEmail = "nairadafania01@gmail.com"; 
+    let selType = "rp"; let selUse = "once";
+
+    function switchAdmin(view, btn) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+        document.getElementById('view-' + view).classList.add('active');
+        if(view === 'jbadmin') { loadJBPosts(); loadJBPublic(); }
+        if(view === 'grupadmin') { loadGrupPosts(); loadGrupPublic(); }
+        if(view === 'banners') { loadBanners(); }
+        if(view === 'orders') { listenOrders(); }
+        if(view === 'tick') { loadVerifiedUsers(); }
+    }
+
+    function showToast(msg) {
+        const area = document.getElementById('toastArea');
+        const t = document.createElement('div');
+        t.className = 'toast'; t.innerHTML = `<span>✔</span> ${msg}`;
+        area.appendChild(t);
+        setTimeout(() => { t.remove(); }, 3000);
+    }
+
+    function openModernModal(title, msg, onConfirm) {
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalMsg').innerText = msg;
+        document.getElementById('modernModal').style.display = 'flex';
+        document.getElementById('modalConfirmBtn').onclick = onConfirm;
+    }
+    function closeModernModal() { document.getElementById('modernModal').style.display = 'none'; }
+
+    // --- BLUE TICK SYSTEM ---
+    async function addVerifiedUser() {
+        const name = document.getElementById('verifyInputName').value.trim();
+        if(!name) return showToast("Isi nama user!");
+        
+        await db.collection("verified_users").doc(name).set({
+            nama: name,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById('verifyInputName').value = "";
+        showToast("Centang Biru Diaktifkan!");
+    }
+
+    function loadVerifiedUsers() {
+        db.collection("verified_users").orderBy("timestamp", "desc").onSnapshot(snap => {
+            const area = document.getElementById('verifiedUsersList');
+            area.innerHTML = "";
+            snap.forEach(doc => {
+                const d = doc.data();
+                area.innerHTML += `
+                <div class="verified-item">
+                    <span>${d.nama} <img src="centang.png" class="blue-tick-img"></span>
+                    <button class="btn-red" style="width:auto; padding:5px 15px; margin:0" onclick="confirmDeleteDoc('verified_users', '${doc.id}')">Cabut</button>
+                </div>`;
+            });
+        });
+    }
+
+    // --- IMAGE PREVIEW ---
+    function previewImg(input, targetId) {
+        const preview = document.getElementById(targetId);
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // --- BANNER SYSTEM ---
+    async function uploadNewBanner() {
+        const file = document.getElementById('bannerFile').files[0];
+        if(!file) return showToast("Pilih file dulu!");
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const newUrl = e.target.result;
+            const doc = await db.collection("settings").doc("banners").get();
+            let urls = doc.exists ? doc.data().urls : [];
+            urls.push(newUrl);
+            await db.collection("settings").doc("banners").set({ urls });
+            showToast("Banner Ditambahkan!");
+            loadBanners();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function loadBanners() {
+        const area = document.getElementById('bannerListArea');
+        db.collection("settings").doc("banners").onSnapshot(doc => {
+            if(!doc.exists) return;
+            area.innerHTML = "";
+            doc.data().urls.forEach((url, index) => {
+                area.innerHTML += `
+                <div class="card">
+                    <img src="${url}" style="width:100%; height:100px; object-fit:cover; border-radius:10px;">
+                    <button class="btn-red" onclick="deleteBanner(${index})">HAPUS BANNER</button>
+                </div>`;
+            });
+        });
+    }
+
+    async function deleteBanner(index) {
+        openModernModal("Hapus Banner?", "Banner ini akan hilang dari slide utama.", async () => {
+            const doc = await db.collection("settings").doc("banners").get();
+            let urls = doc.data().urls;
+            urls.splice(index, 1);
+            await db.collection("settings").doc("banners").set({ urls });
+            closeModernModal();
+            showToast("Banner Dihapus!");
+        });
+    }
+
+    // --- PROMO ---
+    function togglePromoDropdown() { document.getElementById('promoGameOptions').classList.toggle('show'); }
+    function selectPromoGame(val, text) {
+        document.getElementById('promoSelectedGameText').innerText = text;
+        document.getElementById('promoSelectedGameValue').value = val;
+        document.getElementById('promoGameOptions').classList.remove('show');
+    }
+    function setPromoType(v) { selType = v; document.getElementById('typeRp').classList.toggle('active', v==='rp'); document.getElementById('typePct').classList.toggle('active', v==='pct'); }
+    function setPromoUse(v) { selUse = v; document.getElementById('useOnce').classList.toggle('active', v==='once'); document.getElementById('useMulti').classList.toggle('active', v==='multi'); }
+
+    async function savePromo() {
+        const code = document.getElementById('pcCode').value.toUpperCase();
+        if(!code) return showToast("Isi Kode!");
+        await db.collection("promos").doc(code).set({
+            code: code, targetGame: document.getElementById('promoSelectedGameValue').value,
+            discValue: parseInt(document.getElementById('pcDisc').value), discType: selType,
+            useMode: selUse, limit: parseInt(document.getElementById('pcLimit').value),
+            expired: document.getElementById('pcExp').value, usedCount: 0
+        });
+        showToast("Berhasil!"); resetPromoForm();
+    }
+    function resetPromoForm() { document.getElementById('pcCode').value = ""; document.getElementById('btnSavePromo').innerText = "AKTIFKAN PROMO"; document.getElementById('btnCancelPromo').style.display = "none"; }
+    function editPromo(p) { 
+        document.getElementById('pcCode').value = p.code; document.getElementById('pcDisc').value = p.discValue;
+        setPromoType(p.discType); setPromoUse(p.useMode); document.getElementById('btnSavePromo').innerText = "SIMPAN PERUBAHAN";
+        document.getElementById('btnCancelPromo').style.display = "block";
+    }
+
+    db.collection("promos").onSnapshot(snap => {
+        const area = document.getElementById('activePromoList'); area.innerHTML = "";
+        snap.forEach(doc => {
+            const p = doc.data();
+            area.innerHTML += `<div class="card"><p><span class="promo-badge">${p.code}</span> Potongan ${p.discValue}${p.discType==='rp'?'RP':'%'}</p><div style="display:flex; gap:10px; margin-top:10px;"><button class="btn-blue" onclick='editPromo(${JSON.stringify(p)})'>EDIT</button><button class="btn-red" onclick="confirmDeleteDoc('promos', '${doc.id}')" style="margin:0">HAPUS</button></div></div>`;
+        });
+    });
+
+    // --- JB & GRUP LOGIC ---
+    async function saveJbAdmin() {
+        const id = document.getElementById('editJbAdminId').value;
+        const file = document.getElementById('jbAdmFile').files[0];
+        const process = async (imgUrl) => {
+            const data = {
+                game: document.getElementById('jbAdmGame').value, price: parseInt(document.getElementById('jbAdmPrice').value),
+                desc: document.getElementById('jbAdmDesc').value, wa: document.getElementById('jbAdmWa').value,
+                seller: "Official Admin", seller_email: adminEmail, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            if(imgUrl) data.img = imgUrl;
+            if(id) await db.collection("jb_accounts").doc(id).update(data);
+            else await db.collection("jb_accounts").add(data);
+            showToast("Sukses!"); resetJbAdminForm();
+        };
+        if(file) { const r = new FileReader(); r.onload = e => process(e.target.result); r.readAsDataURL(file); } else process(null);
+    }
+
+    function loadJBPosts() {
+        db.collection("jb_accounts").where("seller_email", "==", adminEmail).onSnapshot(snap => {
+            const area = document.getElementById('listAdminPostJB'); area.innerHTML = "";
+            snap.forEach(doc => {
+                const d = doc.data();
+                area.innerHTML += `<div class="card"><img src="${d.img}" style="width:100%; height:120px; object-fit:cover; border-radius:10px;"><p><b>${d.game}</b></p><p>Rp ${d.price.toLocaleString()}</p><div style="display:flex; gap:10px;"><button class="btn-blue" onclick='editPostJB("${doc.id}", ${JSON.stringify(d).replace(/'/g, "&apos;")})'>EDIT</button><button class="btn-red" onclick="confirmDeleteDoc('jb_accounts', '${doc.id}')" style="margin:0">HAPUS</button></div></div>`;
+            });
+        });
+    }
+
+    function loadJBPublic() {
+        db.collection("jb_accounts").where("seller_email", "!=", adminEmail).onSnapshot(snap => {
+            const area = document.getElementById('listPublicMonitoringJB'); area.innerHTML = "";
+            snap.forEach(doc => {
+                const d = doc.data();
+                area.innerHTML += `<div class="card" style="border-color:#450a0a"><img src="${d.img}" style="width:50px; height:50px; border-radius:5px; object-fit:cover;"><p><b>${d.game}</b> - Rp ${d.price.toLocaleString()}</p><p style="font-size:0.7rem; color:#94a3b8">User: ${d.seller}</p><button class="btn-red" onclick="confirmDeleteDoc('jb_accounts', '${doc.id}')">Hapus Publik</button></div>`;
+            });
+        });
+    }
+
+    function editPostJB(id, d) {
+        document.getElementById('editJbAdminId').value = id;
+        document.getElementById('jbAdmGame').value = d.game; document.getElementById('jbAdmPrice').value = d.price;
+        document.getElementById('jbAdmDesc').value = d.desc; document.getElementById('jbPreview').src = d.img;
+        document.getElementById('jbAdmWa').value = d.wa; document.getElementById('btnSaveJbAdmin').innerText = "SIMPAN PERUBAHAN";
+        document.getElementById('btnCancelJbEdit').style.display = "block";
+    }
+
+    function resetJbAdminForm() {
+        document.getElementById('editJbAdminId').value = ""; document.getElementById('jbPreview').src = "";
+        document.getElementById('btnSaveJbAdmin').innerText = "POSTING AKUN ADMIN"; document.getElementById('btnCancelJbEdit').style.display = "none";
+    }
+
+    async function saveGrupAdmin() {
+        const id = document.getElementById('editGrupAdminId').value;
+        const file = document.getElementById('grupAdmFile').files[0];
+        const process = async (imgUrl) => {
+            const data = {
+                name: document.getElementById('grupAdmName').value, desc: document.getElementById('grupAdmDesc').value,
+                link: document.getElementById('grupAdmLink').value, seller: "Official Admin",
+                owner_email: adminEmail, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            if(imgUrl) data.img = imgUrl;
+            if(id) await db.collection("groups").doc(id).update(data);
+            else await db.collection("groups").add(data);
+            showToast("Grup Sukses!"); resetGrupAdminForm();
+        };
+        if(file) { const r = new FileReader(); r.onload = e => process(e.target.result); r.readAsDataURL(file); } else process(null);
+    }
+
+    function loadGrupPosts() {
+        db.collection("groups").where("owner_email", "==", adminEmail).onSnapshot(snap => {
+            const area = document.getElementById('listAdminPostGrup'); area.innerHTML = "";
+            snap.forEach(doc => {
+                const d = doc.data();
+                area.innerHTML += `<div class="card"><img src="${d.img}" style="width:60px; height:60px; object-fit:cover; border-radius:10px;"><p><b>${d.name}</b></p><div style="display:flex; gap:10px;"><button class="btn-blue" onclick='editPostGrup("${doc.id}", ${JSON.stringify(d).replace(/'/g, "&apos;")})'>EDIT</button><button class="btn-red" onclick="confirmDeleteDoc('groups', '${doc.id}')" style="margin:0">HAPUS</button></div></div>`;
+            });
+        });
+    }
+
+    function loadGrupPublic() {
+        db.collection("groups").where("owner_email", "!=", adminEmail).onSnapshot(snap => {
+            const area = document.getElementById('listPublicMonitoringGrup'); area.innerHTML = "";
+            snap.forEach(doc => {
+                const d = doc.data();
+                area.innerHTML += `<div class="card" style="border-color:#450a0a"><p><b>${d.name}</b></p><button class="btn-red" onclick="confirmDeleteDoc('groups', '${doc.id}')">Hapus Publik</button></div>`;
+            });
+        });
+    }
+
+    function editPostGrup(id, d) {
+        document.getElementById('editGrupAdminId').value = id;
+        document.getElementById('grupAdmName').value = d.name; document.getElementById('grupAdmDesc').value = d.desc;
+        document.getElementById('grupPreview').src = d.img; document.getElementById('grupAdmLink').value = d.link;
+        document.getElementById('btnSaveGrupAdmin').innerText = "SIMPAN PERUBAHAN"; document.getElementById('btnCancelGrupEdit').style.display = "block";
+    }
+
+    function resetGrupAdminForm() {
+        document.getElementById('editGrupAdminId').value = ""; document.getElementById('grupPreview').src = "";
+        document.getElementById('btnSaveGrupAdmin').innerText = "POSTING GRUP ADMIN"; document.getElementById('btnCancelGrupEdit').style.display = "none";
+    }
+
+    // --- QRIS ---
+    async function updateQris() {
+        const file = document.getElementById('qrisFile').files[0];
+        if(!file) return showToast("Pilih file QRIS!");
+        const r = new FileReader();
+        r.onload = async (e) => {
+            await db.collection("settings").doc("qris").set({ url: e.target.result });
+            showToast("QRIS Diperbarui!");
+        };
+        r.readAsDataURL(file);
+    }
+
+    // --- CATALOG ---
+    function toggleCatDropdown() { document.getElementById('catGameOptions').classList.toggle('show'); }
+    function selectCatGame(name) {
+        document.getElementById('catSelectedGameText').innerText = name;
+        document.getElementById('catSelectedGameValue').value = name;
+        document.getElementById('catGameOptions').classList.remove('show');
+        document.getElementById('itemEditorArea').style.display = "block";
+        loadCatalogItems(name);
+    }
+    async function saveItem() {
+        const g = document.getElementById('catSelectedGameValue').value;
+        const n = document.getElementById('itemName').value;
+        const p = document.getElementById('itemPrice').value;
+        await db.collection("catalog").doc(g).collection("items").doc(n).set({ name: n, price: parseInt(p) });
+        showToast("Item Disimpan!");
+    }
+    function loadCatalogItems(game) {
+        db.collection("catalog").doc(game).collection("items").onSnapshot(snap => {
+            const area = document.getElementById('currentItemsList'); area.innerHTML = "";
+            snap.forEach(doc => {
+                const it = doc.data();
+                area.innerHTML += `<div style="display:flex; justify-content:space-between; padding:10px; border:1px solid #334155; margin-top:5px; border-radius:10px;"><span>${it.name}</span><button style="width:auto; padding:0 10px; background:red; color:white;" onclick="confirmDeleteDoc('catalog/${game}/items', '${doc.id}')">X</button></div>`;
+            });
+        });
+    }
+
+    // --- PESANAN & SETUJU ---
+    function listenOrders() {
+        db.collection("orders").orderBy("waktu", "desc").onSnapshot(snap => {
+            const list = document.getElementById('orderList'); 
+            list.innerHTML = "";
+            snap.forEach(doc => {
+                const d = doc.data();
+                const id = doc.id;
+                list.innerHTML += `
+                <div class="card">
+                    <p style="font-size:0.7rem; color:var(--primary); margin-bottom:10px;">${d.waktu}</p>
+                    <div class="order-detail">
+                        <b>Game:</b> ${d.game}<br>
+                        <b>Paket:</b> ${d.paket}<br>
+                        <b>Player ID:</b> ${d.player_id}<br>
+                        <b>Harga Tagihan:</b> Rp ${d.harga.toLocaleString()}<br>
+                        <hr style="border:0.5px solid #334155; margin:5px 0">
+                        <b>Metode:</b> ${d.nama_payment}<br>
+                        <b>Nama Pengirim:</b> ${d.nama_pengirim}<br>
+                        <b>WhatsApp:</b> ${d.whatsapp}<br>
+                        <b>Gmail:</b> ${d.email || '-'}<br>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn-green" onclick='setujuiPesanan("${id}", ${JSON.stringify(d).replace(/'/g, "&apos;")})'>SETUJU (PROSES)</button>
+                        <button class="btn-red" style="margin:0" onclick="confirmDeleteDoc('orders', '${id}')">TOLAK</button>
+                    </div>
+                </div>`;
+            });
+        });
+    }
+
+    async function setujuiPesanan(id, data) {
+        openModernModal("Proses Pesanan?", "Duit sudah dicek masuk? Pesanan akan dipindah ke riwayat sukses pembeli.", async () => {
+            try {
+                const confirmDate = new Date().toLocaleString('id-ID');
+                await db.collection("success_orders").add({
+                    ...data,
+                    confirm_at: confirmDate,
+                    status: "SUKSES"
+                });
+                await db.collection("orders").doc(id).delete();
+                closeModernModal();
+                showToast("Pesanan Berhasil Diproses!");
+            } catch (e) {
+                alert("Eror: " + e.message);
+            }
+        });
+    }
+
+    // --- SYSTEM ---
+    db.collection("games").onSnapshot(snap => {
+        const catOpts = document.getElementById('catGameOptions');
+        const promoOpts = document.getElementById('promoGameOptions');
+        if(!catOpts || !promoOpts) return;
+        catOpts.innerHTML = "";
+        promoOpts.innerHTML = `<div class="custom-option" onclick="selectPromoGame('all', 'Semua Game')">Semua Game</div>`;
+        snap.forEach(doc => { 
+            catOpts.innerHTML += `<div class="custom-option" onclick="selectCatGame('${doc.id}')">${doc.id}</div>`;
+            promoOpts.innerHTML += `<div class="custom-option" onclick="selectPromoGame('${doc.id}', '${doc.id}')">${doc.id}</div>`; 
+        });
+    });
+
+    function confirmDeleteDoc(col, id) {
+        openModernModal("Hapus Data?", "Yakin ingin menghapus secara permanen?", async () => {
+            try {
+                await db.collection(col).doc(id).delete();
+                closeModernModal(); 
+                showToast("Data Berhasil Dihapus!");
+            } catch (e) {
+                alert("Gagal menghapus: " + e.message);
+            }
+        });
+    }
+
+    window.onclick = e => { if(!e.target.closest('.custom-select-wrapper')) document.querySelectorAll('.custom-options').forEach(o => o.classList.remove('show')); };
+    
+    listenOrders();
+</script>
+</body>
+</html>
